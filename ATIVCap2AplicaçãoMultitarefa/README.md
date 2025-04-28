@@ -1,8 +1,5 @@
-```markdown
-# 🐾 BitDogLab - Monitor de Atividade Dual-Core 
 
-![Badge](https://img.shields.io/badge/Status-Concluído-brightgreen) 
-![Badge](https://img.shields.io/badge/Architecture-Dual_Core-blue)
+# 🐾 BitDogLab - Monitor de Atividade Dual-Core 
 
 ### **Arquitetura Dual-Core**
 | Componente          | Implementação                                                                               |
