@@ -1,5 +1,5 @@
 
-# 🐾 BitDogLab - Monitor de Atividade Dual-Core 
+# BitDogLab - Monitor de Atividade Dual-Core 
 
 ### **Arquitetura Dual-Core**
 | Componente          | Implementação                                                                               |
