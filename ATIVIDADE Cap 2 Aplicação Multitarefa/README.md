@@ -1,133 +1,158 @@
-# EmbarcaTechResidencia
+# Sistema de Monitoramento Multi-núcleo para BitDogLab
 
-# 📟 BitDogLab - Sistema de Monitoramento Multi-núcleo
+Este projeto implementa um sistema dual-core utilizando a placa **BitDogLab** (baseada no Raspberry Pi Pico), para **monitorar o joystick analógico** e **controlar LEDs RGB e buzzer** de forma inteligente.
 
-Este projeto implementa um sistema de monitoramento para a placa **BitDogLab** usando os dois núcleos da **Raspberry Pi Pico**.
+## Descrição
 
-- O **Core 0** lê periodicamente o valor do joystick analógico e envia o estado para o **Core 1** via FIFO.
-- O **Core 1** interpreta o estado recebido, aciona o buzzer em situações críticas e ajusta a cor do LED RGB conforme o nível de alerta.
-
----
-
-## 🚀 Funcionamento
-
-- A cada **2 segundos**, o Core 0 lê o valor do eixo **X** do joystick.
-- Se o valor ultrapassar um **limiar crítico**, o Core 1:
-  - **Ativa** o **buzzer**.
-  - **Acende** o **LED vermelho**.
-- Caso contrário:
-  - O buzzer permanece **desativado**.
-  - O LED RGB muda de cor para **azul**, **verde** ou **amarelo**, dependendo da intensidade do valor lido.
+- **Core 0:** Realiza a leitura periódica do valor do eixo X do joystick utilizando o ADC interno.  
+- **Core 1:** Recebe o valor via FIFO, determina o estado atual do joystick (baixo, moderado, alto) e aciona os LEDs e o buzzer conforme o nível de atividade.
 
 ---
 
-## 🔧 Hardware Utilizado
+## Funcionalidades
 
-- **BitDogLab** com Raspberry Pi Pico
-- Joystick analógico (ligado aos pinos ADC 26 e 27)
-- LED RGB conectado aos pinos:
-  - Vermelho: GPIO13
-  - Verde: GPIO11
-  - Azul: GPIO12
-- Buzzer ativo no GPIO21
-
----
-
-## 🛠️ Configuração dos Pinos
-
-| Componente | Pino GPIO |
-|:-----------|:----------|
-| LED Vermelho | 13 |
-| LED Verde    | 11 |
-| LED Azul     | 12 |
-| Joystick X   | ADC 1 (GPIO27) |
-| Joystick Y   | ADC 0 (GPIO26) |
-| Buzzer A     | 21 |
+- **Leitura do joystick:** a cada 2 segundos (`add_alarm_in_ms`).
+- **Comunicação entre núcleos:** via **FIFO** (First In First Out).
+- **Controle de LEDs RGB:** para indicar o estado do sistema.
+- **Acionamento do buzzer:** em caso de atividade alta do joystick.
+- **Uso de flags `volatile`** para compartilhamento seguro de estados entre cores.
+- **Organização modular:** funções auxiliares bem separadas.
 
 ---
 
-## 🧩 Bibliotecas utilizadas
+## Definições de Estado do Joystick
 
-- `pico/stdlib.h` — Funções básicas de GPIO, delays e UART/USB
-- `pico/multicore.h` — Controle de múltiplos núcleos
-- `hardware/gpio.h` — Manipulação direta de GPIOs
-- `hardware/adc.h` — Leitura dos pinos ADC
-- `hardware/pwm.h` — Controle de LEDs RGB e buzzer via PWM
-- `hardware/timer.h` — Timers para execução periódica
-
----
-
-## 📈 Estados e Cores do LED
-
-| Valor do Joystick | Estado | Cor do LED |
-|:---|:---|:---|
-| 0% - 30% | Baixo | Azul |
-| 30% - 70% | Médio | Verde |
-| 70% - 85% | Alto | Amarelo |
-| >85% (acima do limiar crítico) | Crítico | Vermelho + buzzer |
+| Estado | Intervalo de valor ADC | LED           | Buzzer  |
+|:------:|:----------------------:|:-------------:|:-------:|
+| 1 - Baixo    | 0 a 1499                | Verde         | Desligado |
+| 2 - Moderado | 1500 a 2999             | Azul          | Desligado |
+| 3 - Alto     | 3000 a 4095             | Vermelho      | Ativado   |
 
 ---
 
-## 🧪 Como usar
+## Organização do Código
 
-1. Conecte a BitDogLab ao computador via USB.
-2. Compile e grave o firmware usando a extensão do Raspberry Pi Pico no Visual Studio Code.
-3. Abra o monitor serial para acompanhar as leituras e mensagens de debug.
-4. Movimente o joystick:
-   - Para a **direita** (X alto), o sistema detectará estado crítico.
-   - Para outras posições, o LED mudará de cor conforme a faixa.
-
----
-
-## 📝 Observações
-
-- O buzzer é ativado com PWM (~2kHz) quando o joystick indica situação crítica.
-- O LED RGB usa PWM para controlar brilho e mistura de cores.
-- O código foi otimizado para:
-  - Uso correto dos dois cores
-  - Acesso seguro à FIFO multicore
-  - Controle eficiente dos atuadores
-- Leitura do eixo Y do joystick não está sendo usada nesta versão, mas pode ser facilmente adicionada.
-
----
-
-## 📋 Autor
-
-Projeto desenvolvido para BitDogLab - **Escola 4.0 / Unicamp**  
-**Desenvolvedor:** ASCCJR
+- `main()`
+  - Inicializa periféricos (ADC, GPIOs, PWM)
+  - Lança o Core 1 (`multicore_launch_core1`)
+  - Configura alarme periódico para leituras
+- `core1_entry()`
+  - Espera valores via FIFO
+  - Atualiza estado global
+  - Ativa LEDs e buzzer de acordo com o estado
+- Funções auxiliares:
+  - `setup_gpios()`
+  - `setup_adc()`
+  - `setup_pwm()`
+  - `set_rgb_led()`
+  - `determinar_estado()`
+  - `atualizar_led_pelo_estado()`
+- `core0_joystick_read_callback()`
+  - Callback do alarme no Core 0 para leitura e envio do joystick
 
 ---
 
-## Perguntas e dúvidas:
+## Requisitos Técnicos Atendidos ✅
 
-1. **O joystick so atinge valor alto quando direcionado pra direita e assim acendendo a luz vermelha, é pra ser assim?**
-
-Sim, **é pra ser assim mesmo**
-
-
-**O código está lendo o eixo X do joystick** (`JOY_X_PIN`, ADC 1).
-
-- Quando o joystick está **no meio** (posição de repouso), ele gera uma tensão média (~1,65V), que no ADC da BitDogLab vira **aproximadamente 2048** (lembrando que o ADC vai de 0 a 4095).
-- **Quando você empurra o joystick para a direita**, a tensão no eixo X **aumenta** para perto de 3,3V → o ADC lê **valores altos** (perto de 4095).
-- **Quando empurra para a esquerda**, a tensão **cai** para perto de 0V → o ADC lê **valores baixos** (perto de 0).
-
-**Como o limiar crítico (`LIMIAR_CRITICO`) está em 3500**, só quando o joystick vai **fortemente para a direita** é que o `estado > LIMIAR_CRITICO`, e aí:
-
-- O **LED fica vermelho** (estado crítico),
-- O **buzzer toca**.
-
-Se deixar o joystick no meio ou empurrar para a esquerda, o estado fica abaixo de 3500, e aí o LED fica **verde, azul** ou **amarelo** (depende da faixa).
+- [x] Uso de `volatile` para variáveis globais compartilhadas.
+- [x] Uso de `add_alarm_in_ms()` no Core 0.
+- [x] Comunicação inter-core usando FIFO.
+- [x] Definição clara de limiares para os estados do joystick.
+- [x] Controle de buzzer e LEDs via PWM.
 
 ---
 
-### 📈 Em resumo:
-- Direita = estado alto ➔ vermelho + buzzer
-- Meio = estado médio ➔ verde
-- Esquerda = estado baixo ➔ azul
-- Entre eles = estado médio-alto ➔ amarelo
+## Diagrama Simplificado de Funcionamento
+
+```plaintext
+[Core 0]
+ |-> add_alarm_in_ms -> Ler Joystick -> Enviar via FIFO
+                          
+[Core 1]
+ <- FIFO <- Recebe valor
+       |-> Determina estado
+       |-> Atualiza LEDs
+       |-> Liga/Desliga buzzer
+```
 
 ---
 
-### ⚡ Se quiser que a "zona crítica" váe para outra direção:
-- Precisa mudar qual ADC lê (`JOY_Y_PIN` para cima/baixo)  
-- Ou inverter os valores no mapeamento de LED.
+## Hardware Utilizado
+
+- **Placa:** BitDogLab
+- **Componentes:**
+  - Joystick analógico
+  - LED RGB
+  - Buzzer Piezoelétrico
+  - Botões (não usados diretamente nesta aplicação)
+
+---
+
+## Compilação
+
+Este projeto usa:
+- **SDK Pico C**
+- **CMake**
+- **Visual Studio Code** com extensão Pico para desenvolvimento.
+
+---
+
+## Observação
+
+- Atualmente, apenas o eixo **X do joystick** está sendo monitorado.
+- A leitura do eixo Y poderia ser adicionada facilmente se desejado no futuro.
+- O segundo buzzer (Buzzer B) não foi utilizado neste projeto.
+
+---
+
+## Autor
+
+Projeto desenvolvido para estudo de sistemas embarcados multicore usando a plataforma BitDogLab.
+
+---
+
+- Vou explicar o propósito de cada um dos requisitos técnicos solicitados para o seu projeto:
+
+## Especificações Técnicas
+
+### 1. Flag volatile para armazenar o estado global
+
+**Propósito:** A palavra-chave `volatile` indica ao compilador que uma variável pode mudar a qualquer momento, independentemente do fluxo de código visível. Em um sistema multicore, isso é essencial porque:
+
+- Previne otimizações do compilador que poderiam eliminar leituras repetidas da variável
+- Garante que o valor mais recente seja sempre lido da memória, não de registradores ou cache
+- Evita problemas de sincronização entre os núcleos
+
+Sem o `volatile`, um núcleo poderia não perceber mudanças feitas pelo outro núcleo, causando comportamentos imprevisíveis.
+
+### 2. Utilizar add_alarm_in_ms() no Core 0
+
+**Propósito:** Esta função cria um alarme de tempo único que:
+
+- É mais flexível que temporizadores repetitivos, pois permite reagendar dinamicamente
+- Consome menos recursos que um loop de polling
+- Permite controle mais preciso sobre quando ocorrerá a próxima leitura
+- O retorno da função determina quando o próximo alarme será disparado, permitindo ajustes dinâmicos do intervalo
+
+Diferente do `add_repeating_timer_ms()`, o `add_alarm_in_ms()` força você a reagendar explicitamente, o que dá maior controle sobre o comportamento temporal.
+
+### 3. Utilizar FIFO para enviar comandos ao Core 1
+
+**Propósito:** A comunicação FIFO (First In, First Out) é uma forma segura de comunicação intercore porque:
+
+- Implementa um buffer de mensagens ordenado
+- Evita condições de corrida (race conditions)
+- Funciona como uma fila, preservando a ordem das mensagens
+- Tem operações atômicas gerenciadas pelo hardware
+- Bloqueia o núcleo receptor até que haja dados disponíveis, evitando polling desnecessário
+
+Outras formas de comunicação intercore poderiam exigir mecanismos de sincronização mais complexos.
+
+### 4. Definir limiares da leitura do joystick para cada estado
+
+**Propósito:** Os limiares fornecem um mapeamento entre valores analógicos brutos e estados compreensíveis:
+
+- Facilita a interpretação dos dados em níveis discretos de severidade
+- Permite respostas apropriadas a cada nível de entrada
+- Simplifica a lógica de controle no sistema
+- Possibilita feedback visual intuitivo através das cores do LED RGB
