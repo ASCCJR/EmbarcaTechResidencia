@@ -1,7 +1,3 @@
-# EmbarcaTechResidencia
-
-Vou adicionar uma seção específica destacando o atendimento aos requisitos técnicos. Aqui está o README atualizado:
-
 ```markdown
 # 🐾 BitDogLab - Monitor de Atividade Dual-Core 
 
