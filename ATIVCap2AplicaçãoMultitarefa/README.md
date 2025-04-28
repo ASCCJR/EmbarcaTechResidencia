@@ -1,5 +1,5 @@
 
-# BitDogLab - Monitor de Atividade Dual-Core 
+# ATIVIDADE: Cap 2: Aplicação Multitarefa
 
 ### **Arquitetura Dual-Core**
 | Componente          | Implementação                                                                               |
