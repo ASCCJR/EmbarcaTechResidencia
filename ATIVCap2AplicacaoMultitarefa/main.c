@@ -138,7 +138,10 @@ int64_t core0_joystick_read_callback(alarm_id_t id, void *user_data) {
 
 // Configura os GPIOs utilizados
 void setup_gpios() {
+    gpio_init(BUZZER_A_PIN);
+    gpio_set_dir(BUZZER_A_PIN, GPIO_OUT);
     // Pinos dos LEDs RGB e Buzzer serão configurados em setup_pwm()
+    // Outros GPIOs podem ser inicializados aqui se necessário
 }
 
 // Configura o ADC para a leitura dos sensores (joystick)
