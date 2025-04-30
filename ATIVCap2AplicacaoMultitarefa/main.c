@@ -34,7 +34,7 @@
 #define BUZZER_WRAP_VALUE 62499           // Wrap para PWM do buzzer (~2kHz audível)
 
 // Flag volatile para armazenar o estado global 
-volatile uint8_t global_state = 0;
+volatile uint8_t global_state = 0; // Estado compartilhado entre cores
 
 // --- Protótipos ---
 void core1_entry(); // Função que roda no Core 1: recebe dados do Core 0 e aciona buzzer/LED.
@@ -98,7 +98,7 @@ int main() {
 
     // Loop principal do Core 0
     while (1) {
-        tight_loop_contents();     // Mantém o processador ativo (ou use __wfi() para economizar energia)
+        __wfi(); // Núcleo 0 dorme até o próximo alarme
     }
 
     return 0; // Nunca alcançado
