@@ -213,12 +213,6 @@ void update_rgb_led_from_state(uint8_t state) {
             b = 0;
             printf("Core 1: LED Vermelho.\n");
             break;
-        default: // Estado Desconhecido (opcional)
-            r = max_bright / 2;
-            g = max_bright / 2;
-            b = max_bright / 2; // Branco ou outra cor para indicar erro
-            printf("Core 1: Estado Desconhecido.\n");
-            break;
     }
 
     set_rgb_led(r, g, b);
